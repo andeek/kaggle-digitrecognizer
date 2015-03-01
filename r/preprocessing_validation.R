@@ -23,6 +23,9 @@ train %>%
 train %>%
   anti_join(validation) -> train
 
+train %>% 
+  mutate_each(funs(as.numeric), starts_with("pixel")) -> train
+
 
   
 
