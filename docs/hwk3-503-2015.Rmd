@@ -1,0 +1,34 @@
+---
+title: "Statistics 503 Hwk 3"
+date: Due "March 4, 2015"
+output: html_document
+---
+
+The MNIST database of handwritten digits, is the classic data mining challenge, has a training set of 60,000 examples, and a test set of 10,000 examples. It is a subset of a larger set available from NIST. The digits have been size-normalized and centered in a fixed-size image.
+
+It is a good database for people who want to try learning techniques and pattern recognition methods on real-world data while spending minimal efforts on preprocessing and formatting. 
+
+Kaggle has just revived this data set, with an academic challenge at https://www.kaggle.com/c/digit-recognizer (the original data is available at http://yann.lecun.com/exdb/mnist/index.html). 
+
+Your job is to form a team of your own choosing, from the students within this class, and enter the challenge. You need to 
+
+1. Write a couple of paragraphs describing how the data was pre-processed to get it into such a clean state for classification.
+2. Submit at least one entry to the competition. 
+3. Write short report (about 5 pages) describing your methods.
+4. Make several plots of the training data, that reveal the differences between digits and the variation in how they are written. 
+5. Describe some derived variables that you might calculate on the images that would help reduce the number of variables down from 784, to a smaller set that can mostly distinguish the digits. (As an example look at the UCI ML Repository letter recognition data set, https://archive.ics.uci.edu/ml/datasets/Letter+Recognition.)
+
+Scores for the homework will be based on accurate predictions of the digits, how well your methodology is explained, and reproducible, and what the graphics reveal about the handwriting.
+
+```{r fig.height=3, fig.width=3, echo=FALSE}
+digits <- read.csv("train.csv") # ~/data/mnust/kaggle/train.csv
+
+# Check the appearance
+library(ggplot2)
+x <- data.frame(x=rep(1:28, 28), y=rep(1:28, rep(28, 28)), g=as.matrix(digits)[7,-1])
+qplot(x, -y, data=x, fill=255-g, geom="tile") + theme_bw() + theme(aspect.ratio=1, legend.position="none")
+x <- data.frame(x=rep(1:28, 28), y=rep(1:28, rep(28, 28)), g=as.matrix(digits)[8,-1])
+qplot(x, -y, data=x, fill=255-g, geom="tile") + theme_bw() + theme(aspect.ratio=1, legend.position="none")
+x <- data.frame(x=rep(1:28, 28), y=rep(1:28, rep(28, 28)), g=as.matrix(digits)[9,-1])
+qplot(x, -y, data=x, fill=255-g, geom="tile") + theme_bw() + theme(aspect.ratio=1, legend.position="none")
+```
