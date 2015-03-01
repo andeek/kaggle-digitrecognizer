@@ -1,0 +1,38 @@
+---
+title: "Kaggle Digit Recognizing"
+author: "Andee Kaplan and Samantha Tyner"
+date: "March 4, 2015"
+output: 
+  pdf_document:
+    fig_width: 4
+    fig_height: 3
+---
+
+Data Pre-Processing and Description
+----
+The data we are using was heavily pre-processed by MNIST.  Each image was originally in black and white, and was first normalized to fit in a $20 \times 20$ pixel box.  The normalization process, however, created a gray scale.  Subsequently, each image was centered in $28 \times 28$ pixel field around each individual image's center pixel mass. Then, the value of each of the $28 \times 28 = 784$ pixels was recorded.  These values range from 0 to 255, with 0 being the lightest possible and 255 being the darkest possible pixel value. We received the training data in a $42000 \times 785$ data frame.  The first column is the value of the digit drawn, and the remaining columns are the pixel values for each of the 784 pixels.  These columns are labeled "pixel0" through "pixel783."  "pixel0" corresponds to the top left pixel, "pixel27" corresponds to the top right pixel, "pixel756" corresponds to the bottom left pixel, and "pixel783" corresponds to the bottom right pixel in the image.  Below, we plot an example of each digit to give an idea of what the images look like.
+
+```{r readingdata,echo=FALSE,cache=TRUE}
+train <- read.csv("~/Desktop/503/HW3/kaggle-digitrecognizer/data/train.csv")
+```
+
+```{r exampleplots,message=FALSE,echo=FALSE}
+library(plyr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+idx <- rep(0,10)
+for (i in 0:9){
+  idx[i+1] <- which(train$label == i)[1]
+}
+g <- train[idx,]
+g2 <- gather(g,label)
+names(g2) <- c("digit","pixel","value")
+g3 <- g2 %>% group_by(digit) %>% arrange(digit)
+examples <- data.frame(x=rep(rep(1:28, 28),10), y=rep(rep(1:28, rep(28, 28)),10), g3)
+
+qplot(x, -y, data=examples, fill=value, geom="tile") + theme_bw() + theme(aspect.ratio=1,legend.position='none') + scale_fill_continuous(low='white',high='black') + facet_wrap(~digit,nrow=2)
+```
+
+Feature Selection
+---
