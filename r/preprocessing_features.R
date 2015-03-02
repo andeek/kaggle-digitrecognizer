@@ -6,6 +6,7 @@
 #reusible function for creating features
 create_features <- function(data) {
   data %>%
+    ungroup() %>%
     mutate(id = 1:n()) %>%
     gather(location, value, -label, -id) %>%
     mutate(location = as.numeric(gsub("pixel", "", location))) %>% 
