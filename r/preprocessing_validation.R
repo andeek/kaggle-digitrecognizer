@@ -12,6 +12,7 @@ test <- read.csv("data/test.csv", header=TRUE)
 #library --------------------------------------
 library(dplyr)
 library(tidyr)
+library(ggplot2)
 
 #split into train/validate -------------------
 set.seed(503503) #reproduce
@@ -25,6 +26,9 @@ train %>%
 
 train %>% 
   mutate_each(funs(as.numeric), starts_with("pixel")) -> train
+
+test %>%
+  mutate(label = paste0("fake", 1:n())) -> test #fake label for grouping
 
 
   
