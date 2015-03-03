@@ -17,7 +17,7 @@ rf$importance %>%
 
 rf.predict <- predict(rf, validate_features, type = "class")
 
-#8.7% validation error 
+#7.95% validation error 
 #mean(as.numeric(as.character(rf.predict)) != validate_features$label)
 
 ## boosted trees ------------------------------------------------
@@ -86,13 +86,13 @@ rf_49 <- randomForest(factor(label) ~ .,
 
 
 ## chain random forests
-rf.pred_35 <- predict(rf_235, validate_features[which(as.character(rf.predict) %in% c("3", "5")),])
+rf.pred_35 <- predict(rf_35, validate_features[which(as.character(rf.predict) %in% c("3", "5")),])
 rf.pred_49 <- predict(rf_49, validate_features[which(as.character(rf.predict) %in% c("4", "9")),])
 
 rf.pred_combo <- rf.predict
 rf.pred_combo[which(as.character(rf.predict) %in% c("3", "5"))] <- rf.pred_35
 rf.pred_combo[which(as.character(rf.predict) %in% c("4", "9"))] <- rf.pred_49
 
-#8.3% validation error 
+#7.65% validation error 
 #mean(as.character(rf.pred_combo) != validate_features$label)
 

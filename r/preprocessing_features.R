@@ -16,6 +16,7 @@ create_features <- function(data) {
   names(data.rc)[c(ncol(data.rc) - 1, ncol(data.rc))] <- c("row", "column")
   
   data.rc %>%
+    filter(row > 2, row < 27) %>% #get rid of empty rows
     group_by(label, id, row) %>%
     summarise(row_num = sum(value > 0)) %>%
     ungroup() %>%
@@ -23,6 +24,7 @@ create_features <- function(data) {
     spread(row, row_num) -> row_summary
   
   data.rc %>%
+    filter(column > 2, column < 27) %>% #get rid of empty columns
     group_by(id, column, label) %>%
     summarise(col_num = sum(value > 0)) %>%
     ungroup() %>%
@@ -53,12 +55,36 @@ create_features <- function(data) {
     group_by(id, label) %>%
     summarise(num_16 = sum(value > 0)) -> num_16_summary
   
+  data.rc %>%
+    filter(row %in% 1:8, column %in% 1:8) %>%
+    group_by(id, label) %>%
+    summarise(num_top_left = sum(value > 0)) -> num_top_left_summary
+  
+  data.rc %>%
+    filter(row %in% 21:28, column %in% 1:8) %>%
+    group_by(id, label) %>%
+    summarise(num_bottom_left = sum(value > 0)) -> num_bottom_left_summary
+  
+  data.rc %>%
+    filter(row %in% 1:8, column %in% 21:28) %>%
+    group_by(id, label) %>%
+    summarise(num_top_right = sum(value > 0)) -> num_top_right_summary
+  
+  data.rc %>%
+    filter(row %in% 21:28, column %in% 21:28) %>%
+    group_by(id, label) %>%
+    summarise(num_bottom_right = sum(value > 0)) -> num_bottom_right_summary
+  
   inner_join(tot_summary, row_summary) %>%
     inner_join(column_summary) %>%
     inner_join(num_2_summary) %>%
     inner_join(num_4_summary) %>%
     inner_join(num_8_summary) %>%
     inner_join(num_16_summary) %>% 
+    inner_join(num_top_right_summary) %>% 
+    inner_join(num_top_left_summary) %>% 
+    inner_join(num_bottom_right_summary) %>% 
+    inner_join(num_bottom_left_summary) %>% 
     return()
 }
 
