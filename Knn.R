@@ -100,3 +100,23 @@ prop_mclass_knn35 <- 1 - length(which(knn35$fitted.values == validate_features$l
 
 # confusion matrix
 cmat_knn35 <- table(validate_features$label, knn35$fitted.values)
+
+#output best predictions. 
+knn11$fitted.values
+
+#Making predictors for just 4&9 and 3&5
+idx.val <- which(knn11$fitted.values %in% c(4,9)) 
+knn11.49 <- kknn(as.factor(label)~., train = subset(train_features[,-1], label %in% c(4,9)), test = validate_features[idx.val,-1], k = 11)
+
+1 - length(which(knn11.49$fitted.values == validate_features$label[idx.val])) / length(idx.val)
+
+
+ggplot(data=NULL, aes(x = as.factor(validate_features$label[idx.val]), y = as.factor(knn7.49$fitted.values))) + 
+  geom_tile(alpha = .01, fill = 'blue') + theme_bw() + labs(x="True Value", y="Value Classified as", title = "K Nearest Neighbors, k = 7") + 
+  theme(aspect.ratio = 1, panel.grid.major = element_blank())
+
+idx.val2 <- which(knn11$fitted.values %in% c(3,5)) 
+
+knn11.35 <- kknn(as.factor(label)~., train = subset(train_features[,-1], label %in% c(3,5)), test = validate_features[idx.val2,-1], k = 11)
+
+
