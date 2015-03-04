@@ -19,7 +19,6 @@ source("../r/preprocessing_validation.R")
 ```
 
 ```{r exampleplots, message=FALSE, echo=FALSE, fig.cap="\\label{fig:examp}An example of each digit to give an idea of what the images look like."}
-library(plyr)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -116,10 +115,42 @@ train %>%
   
 ```
 
-This set of features performed slightly better than the other set, so we ended up using these features in our final model. In figure \ref{fig:pairs}, we have paired scatterplots of 3 of our moving average features colored by label. It appears that 7 (yellow) becomes distinguishable from the group using these features. Additionally, 3 (red) appears to separate using these features as well.
+This set of features performed slightly better than the other set, so we ended up using these features in our final model. We can have a look at the distribution of values of three of our features that will be important based on our later random forest model.
+
+```{r features, fig.height=4, fig.width=7, echo=FALSE, message=FALSE, warning=FALSE}
+load("../written_results/features_ma.RData")
+
+train_features_ma %>%
+  select(mean_5_9) %>%
+  ggplot() +
+  geom_histogram(aes(mean_5_9)) +
+  facet_wrap(~label) +
+  theme_bw()
+```
+
+```{r features2, fig.height=4, fig.width=7, echo=FALSE, message=FALSE, warning=FALSE}
+train_features_ma %>%
+  select(mean_5_13) %>%
+  ggplot() +
+  geom_histogram(aes(mean_5_13)) +
+  facet_wrap(~label) +
+  theme_bw()
+```
+
+```{r features3, fig.height=4, fig.width=7, echo=FALSE, message=FALSE, warning=FALSE}
+train_features_ma %>%
+  select(mean_9_13) %>%
+  ggplot() +
+  geom_histogram(aes(mean_9_13)) +
+  facet_wrap(~label) +
+  theme_bw()
+```
+
+We can see there are definite differences in where the values are located across the labels, but something else interesting to note is the spread of thes values within a digit label. This is indicative of the differences in handwriting across samples, and could prove to be a complication.
+
+In figure \ref{fig:pairs}, we have paired scatterplots of 3 of our moving average features colored by label. It appears that 7 (yellow) becomes distinguishable from the group using these features. Additionally, 3 (red) appears to separate using these features as well.
 
 ```{r important-features, fig.height=7, fig.width=7, fig.cap="\\label{fig:pairs}Paired scatterplots of 3 of our moving average features colored by label. It appears that 7 (yellow) becomes distinguishable from the group using these features.", cache=FALSE, echo=FALSE}
-load("../written_results/features_ma.RData")
 train_features_ma %>%
   ungroup() %>%
   select(mean_5_9, mean_9_13, mean_5_13) %>%
@@ -149,7 +180,7 @@ data.frame(Model = c("KNN", "Neural Net", "SVM", "Random Forest", "Boosted Tree"
                           "shrinkage = .1, depth = 16, n.trees = 500"),
            error = c(0.09725, 
                      0.10582, 
-                     , 
+                     NA, 
                      mean(as.numeric(as.character(rf.predict_ma)) != validate_features_ma$label),
                      mean(apply(boosted_ma.pred[,,1], 1, which.max) - 1 != validate_features_ma$label))) %>%
   kable(digits = 4, col.names = c("Model", "Parameters", "Validation Error"), caption = "\\label{tab:errors}Best models from each group of models displayed with parameters and validation error rates. The boosted tree model worked best on our validation set.")
@@ -166,7 +197,7 @@ rownames(conf)[nrow(conf)] <- "% Correct"
 
 conf %>%
   kable(digits = 2, caption = "\\label{tab:conf}Confusion matrix for the boosted tree model with depth of 16 and learning rate 0.1. The % correctly specified is added to each column as an indicator of where our model struggled.")
-  
+
 ```
 
 It appears that our model has the most trouble predicting fives, with 92% validation accuracy, it is the lowest. Fives are most commonly confused with threes in the model, and second most confused with eights. Another potential issue comes with distinguishing fours and nines. At this point it might be useful to construct a feature that can more easily distinguish between fives, eights, and threes to add to our model. Unfortunately this assignment comes with a finite amount of time, and so we will move forward with the current model. 
@@ -177,8 +208,8 @@ Finally, we transformed our test data to contain the same moving average feature
 
 - *Kaggle team name:* Chebyshev's Gender Inequality
 - *Final model used:* Boosted tree model with depth 16 and learning rate 0.1
-- *Rank in Kaggle (at time of submission):* 
-- *Final percent error:* 
+- *Rank in Kaggle (at time of submission):* 331
+- *Final percent correct:* 94.429%
 
 As a note, all of our code as well as this report are available at https://github.com/andeek/kaggle-digitrecognizer if further details are desired.
 
@@ -315,9 +346,9 @@ svm.ma <- svmlight(as.factor(label)~., data = train_features_ma[,-2], type='C', 
 
 
 #Load Models (time saver) ----------------------------
-load("features_ma.RData")
-load("models.RData")
-load("predict.RData")
+load("../written_results/features_ma.RData")
+load("../written_results/models.RData")
+load("../written_results/predict.RData")
 
 #Predict Test data -----------------------------------
 boosted_ma.test <- predict(boosted_ma, 
@@ -326,6 +357,8 @@ boosted_ma.test <- predict(boosted_ma,
 
 #prediction returns probability of each class
 boosted_ma.test <- apply(boosted_ma.test[,,1], 1, which.max) - 1
-write.table(boosted_ma.test, "final_prediction.csv", row.names = FALSE, col.names = FALSE)
+test <- data.frame(ImageId = 1:nrow(test_features_ma),
+                   Label = boosted_ma.test)
+write.csv(test, "../written_results/final_prediction.csv", row.names = FALSE)
 ```
 
