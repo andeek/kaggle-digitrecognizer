@@ -9,6 +9,11 @@ rf <- randomForest(factor(label) ~ .,
                    data = train_features %>% select(-id),
                    ntree = 1000)
 
+
+rf_ma <- randomForest(factor(label) ~ ., 
+                   data = train_features_ma %>% select(-id),
+                   ntree = 1000)
+
 rf$importance %>% 
   data.frame() %>%
   mutate(variable = factor(rownames(.), levels = rownames(.)[order(MeanDecreaseGini)])) %>%
@@ -16,9 +21,11 @@ rf$importance %>%
   geom_point(aes(MeanDecreaseGini, variable))
 
 rf.predict <- predict(rf, validate_features, type = "class")
+rf.predict_ma <- predict(rf_ma, validate_features_ma, type = "class")
 
 #7.95% validation error 
 #mean(as.numeric(as.character(rf.predict)) != validate_features$label)
+#mean(as.numeric(as.character(rf.predict_ma)) != validate_features_ma$label)
 
 ## boosted trees ------------------------------------------------
 library(gbm)
@@ -54,8 +61,22 @@ boosted_6_10 <- boosted.results(.1, 6:10)
 boosted_11_15 <- boosted.results(.1, 11:15)
 boosted_16_20 <- boosted.results(.1, 16:20)
 
+boosted_ma <- gbm(formula = factor(label) ~ .,
+                  data = train_features_ma %>% select(-id),
+                  distribution = "multinomial",
+                  shrinkage = .1,
+                  interaction.depth = 16,
+                  n.trees = 500)
+
+boosted_ma.pred <- predict(boosted_ma, 
+                          validate_features_ma %>% select(-id, -label), 
+                          n.trees = boosted_ma$n.trees, type = "response")
+
+
 ## boosted depth 16, test_error 5.698%
-#round(prop.table(table(boosted_16_20$res[1,]$prediction[[1]] - 1, validate_features$label), margin = 2), 3)
+## round(prop.table(table(boosted_16_20$res[1,]$prediction[[1]] - 1, validate_features$label), margin = 2), 3)
+## mean(apply(boosted_ma.pred[,,1], 1, which.max) - 1 != validate_features_ma$label)
+
 
 ## PPtree -------------------------------------------
 library(PPtree)
@@ -83,6 +104,14 @@ rf_49 <- randomForest(factor(label) ~ .,
                       data = train_features %>% select(-id) %>% filter(label %in% c("4", "9")),
                       ntree = 1000)
 
+
+rf_358_ma <- randomForest(factor(label) ~ ., 
+                      data = train_features_ma %>% select(-id) %>% filter(label %in% c("3", "5", "8")),
+                      ntree = 1000)
+
+rf_479_ma <- randomForest(factor(label) ~ ., 
+                      data = train_features_ma %>% select(-id) %>% filter(label %in% c("4", "7", "9")),
+                      ntree = 1000)
 
 ## chain random forests
 rf.pred_35 <- predict(rf_35, validate_features[which(as.character(rf.predict) %in% c("3", "5")),])
