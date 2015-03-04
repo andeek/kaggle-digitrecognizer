@@ -46,12 +46,16 @@ boosted.results <- function(shrinkage, depth) {
     group_by(shrinkage, depth, train_error) %>%
     mutate(test_error = mean(as.character(prediction[[1]] - 1) != validate_features$label)) -> gbm.results
   
-  return(list(model = boosted.trees, preds = gbm.predict, res = gbm.res))  
+  return(list(model = boosted.trees, preds = gbm.predict, res = gbm.results))  
 }
 
-boosted_1_5 <- boosted.results(c(.1, .2), 1:5)
-boosted_6_10 <- boosted.results(c(.1, .2), 6:10)
-boosted_11_15 <- boosted.results(c(.1, .2), 11:15)
+boosted_1_5 <- boosted.results(.1, 1:5)
+boosted_6_10 <- boosted.results(.1, 6:10)
+boosted_11_15 <- boosted.results(.1, 11:15)
+boosted_16_20 <- boosted.results(.1, 16:20)
+
+## boosted depth 16, test_error 5.698%
+#round(prop.table(table(boosted_16_20$res[1,]$prediction[[1]] - 1, validate_features$label), margin = 2), 3)
 
 ## PPtree -------------------------------------------
 library(PPtree)
@@ -69,11 +73,6 @@ pptree.predict <- PP.classify(validate_features %>%
 
 #31% validation error 
 #mean(as.character(pptree.predict$predict.class) != validate_features$label)
-
-
-## save models because they take a long time to run ----------------------------
-save(rf, boosted.trees, file = "written_results/models.RData")
-save(rf.predict, gbm.predict, file = "written_results/predict.RData")
 
 ## submodels 3, 5, 9, 4 ----------------------------
 rf_35 <- randomForest(factor(label) ~ ., 
@@ -95,4 +94,9 @@ rf.pred_combo[which(as.character(rf.predict) %in% c("4", "9"))] <- rf.pred_49
 
 #7.65% validation error 
 #mean(as.character(rf.pred_combo) != validate_features$label)
+
+## save models because they take a long time to run ----------------------------
+save(rf, rf_35, rf_49, file = "written_results/models.RData")
+save(rf.predict, rf.pred_combo, file = "written_results/predict.RData")
+save(boosted_16_20, file = "written_results/boosted.RData")
 
