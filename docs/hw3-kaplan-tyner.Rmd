@@ -180,7 +180,7 @@ data.frame(Model = c("KNN", "Neural Net", "SVM", "Random Forest", "Boosted Tree"
                           "shrinkage = .1, depth = 16, n.trees = 500"),
            error = c(0.09725, 
                      0.10582, 
-                     NA, 
+                     0.17988, 
                      mean(as.numeric(as.character(rf.predict_ma)) != validate_features_ma$label),
                      mean(apply(boosted_ma.pred[,,1], 1, which.max) - 1 != validate_features_ma$label))) %>%
   kable(digits = 4, col.names = c("Model", "Parameters", "Validation Error"), caption = "\\label{tab:errors}Best models from each group of models displayed with parameters and validation error rates. The boosted tree model worked best on our validation set.")
@@ -331,11 +331,25 @@ boosted_ma.pred <- predict(boosted_ma,
 #validation_error
 #mean(apply(boosted_ma.pred[,,1], 1, which.max) - 1 != validate_features_ma$label)
 
-#K Nearest Neighbors Model on final set of features
+library(kknn)
+knn.ma <- kknn(as.factor(label) ~., train = train_features_ma[,-2], test = validate_features_ma[-c(1,2)], kernal = 'triangular', k = 11)
+#Error from Knn, k=11
+1- length(which(knn.ma$fitted.values == validate_features$label)) / nrow(validate_features_ma)
 
 #Neural Network Model on final set of features
-
-
+library(nnet)
+nnet.ma100 <- nnet(as.factor(label)~., data = train_features_ma[,-2], size = 100, maxit = 100)
+#Predictions from nnet
+p.nnet.ma100 <- predict(nnet.ma100, newdata = validate_features_ma[-c(1,2)], type = 'class')
+#Error from nnet
+1 - length(which(validate_features_ma$label == p.nnet.ma100)) / nrow(validate_features_ma)
+#Support Vector Machine Model on final set of features
+library(KLAR)
+svm.ma <- svmlight(as.factor(label)~., data = train_features_ma[,-2], type='C', pathsvm = "~/svm_light/",svm.options = "-t 2 -g .001")
+#Predictions from SVM
+pred.svm.ma <- predict(svm.ma,newdata= validate_features_ma[,-c(1,2)])
+#Error from SVM
+1 - length(which(validate_features_ma$label == pred.svm.ma$class)) / nrow(validate_features)
 #Support Vector Machine Model on final set of features
 library()
 svm.ma <- svmlight(as.factor(label)~., data = train_features_ma[,-2], type='C', pathsvm = "~/svm_light/",svm.options = "-t 2 -g .001")
