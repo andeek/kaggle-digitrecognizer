@@ -125,7 +125,7 @@ rf.pred_combo[which(as.character(rf.predict) %in% c("4", "9"))] <- rf.pred_49
 #mean(as.character(rf.pred_combo) != validate_features$label)
 
 ## save models because they take a long time to run ----------------------------
-save(rf, rf_35, rf_49, file = "written_results/models.RData")
-save(rf.predict, rf.pred_combo, file = "written_results/predict.RData")
+save(rf, rf_35, rf_49, rf_ma, boosted_ma, file = "written_results/models.RData")
+save(rf.predict, rf.pred_combo, rf.predict_ma, boosted_ma.pred, file = "written_results/predict.RData")
 save(boosted_16_20, file = "written_results/boosted.RData")
 
