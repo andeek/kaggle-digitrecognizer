@@ -180,6 +180,8 @@ Finally, we transformed our test data to contain the same moving average feature
 - *Rank in Kaggle (at time of submission):* 
 - *Final percent error:* 
 
+As a note, all of our code as well as this report are available at https://github.com/andeek/kaggle-digitrecognizer if further details are desired.
+
 # Code Appendix
 
 ```{r code, eval = FALSE}
