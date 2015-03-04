@@ -14,7 +14,7 @@ output:
 
 The data we are using was heavily pre-processed by MNIST.  Each image was originally in black and white, and was first normalized to fit in a $20 \times 20$ pixel box.  The normalization process, however, created a gray scale.  Subsequently, each image was centered in $28 \times 28$ pixel field around each individual image's center pixel mass. Then, the value of each of the $28 \times 28 = 784$ pixels was recorded.  These values range from 0 to 255, with 0 being the lightest possible and 255 being the darkest possible pixel value. We received the training data in a $42000 \times 785$ data frame.  The first column is the value of the digit drawn, and the remaining columns are the pixel values for each of the 784 pixels.  These columns are labeled "pixel0" through "pixel783."  "pixel0" corresponds to the top left pixel, "pixel27" corresponds to the top right pixel, "pixel756" corresponds to the bottom left pixel, and "pixel783" corresponds to the bottom right pixel in the image.  In figure \ref{fig:examp}, we plot an example of each digit to give an idea of what the images look like.
 
-```{r readingdata, echo=FALSE, cache=TRUE, message=FALSE}
+```{r readingdata, echo=FALSE, cache=FALSE, message=FALSE}
 source("../r/preprocessing_validation.R")
 ```
 
@@ -59,7 +59,7 @@ Our general approach to feature selection was to pick features that would captur
 
 After playing with several models and these features, we decided to try a different approach: maybe thinking less like a human and more like a computer would be better.  So, we computed moving averages of values in $8 \times 8$ squares across both rows and columns. To keep the number of features small, we move the squares 50% of their width each time, for a total of 6 groups in each row, 6 in each columns, and 36 features total. This overlapping pattern is plotted in figure \ref{fig:overlap} to show the pattern described. 
 
-```{r overlapping-features, echo=FALSE, cache=TRUE, fig.cap = "\\label{fig:overlap}Squares across both rows and columns used to create overlapping features.", dependson="readingdata"}
+```{r overlapping-features, echo=FALSE, cache=FALSE, fig.cap = "\\label{fig:overlap}Squares across both rows and columns used to create overlapping features."}
 train %>%
     ungroup() %>%
     mutate(id = 1:n()) %>%
@@ -118,7 +118,7 @@ train %>%
 
 This set of features performed slightly better than the other set, so we ended up using these features in our final model. In figure \ref{fig:pairs}, we have paired scatterplots of 3 of our moving average features colored by label. It appears that 7 (yellow) becomes distinguishable from the group using these features. Additionally, 3 (red) appears to separate using these features as well.
 
-```{r important-features, fig.height=7, fig.width=7, fig.cap="\\label{fig:pairs}Paired scatterplots of 3 of our moving average features colored by label. It appears that 7 (yellow) becomes distinguishable from the group using these features.", cache=TRUE, echo=FALSE}
+```{r important-features, fig.height=7, fig.width=7, fig.cap="\\label{fig:pairs}Paired scatterplots of 3 of our moving average features colored by label. It appears that 7 (yellow) becomes distinguishable from the group using these features.", cache=FALSE, echo=FALSE}
 load("../written_results/features_ma.RData")
 train_features_ma %>%
   ungroup() %>%
@@ -142,14 +142,14 @@ Tree models include random forests and boosted trees. In all of our models the s
 load("../written_results/predict.RData")
 
 data.frame(Model = c("KNN", "Neural Net", "SVM", "Random Forest", "Boosted Tree"),
-           Parameters = c("",
-                          "",
-                          "", 
+           Parameters = c("k = 11, kernel = 'triangular'",
+                          "size = 100, MaxNWgts = 5000, maxit = 100",
+                          "kernel = radial, gamma = 0.001", 
                           "n.tree = 1000", 
                           "shrinkage = .1, depth = 16, n.trees = 500"),
-           error = c(NA, 
-                     NA, 
-                     NA, 
+           error = c(0.09725, 
+                     0.10582, 
+                     , 
                      mean(as.numeric(as.character(rf.predict_ma)) != validate_features_ma$label),
                      mean(apply(boosted_ma.pred[,,1], 1, which.max) - 1 != validate_features_ma$label))) %>%
   kable(digits = 4, col.names = c("Model", "Parameters", "Validation Error"), caption = "\\label{tab:errors}Best models from each group of models displayed with parameters and validation error rates. The boosted tree model worked best on our validation set.")
@@ -299,6 +299,20 @@ boosted_ma.pred <- predict(boosted_ma,
 
 #validation_error
 #mean(apply(boosted_ma.pred[,,1], 1, which.max) - 1 != validate_features_ma$label)
+
+#K Nearest Neighbors Model on final set of features
+
+#Neural Network Model on final set of features
+
+
+#Support Vector Machine Model on final set of features
+library()
+svm.ma <- svmlight(as.factor(label)~., data = train_features_ma[,-2], type='C', pathsvm = "~/svm_light/",svm.options = "-t 2 -g .001")
+  #Predictions from SVM
+  pred.svm.ma <- predict(svm.ma,newdata= validate_features_ma[,-c(1,2)])
+  #Error from SVM
+  1 - length(which(validate_features_ma$label == pred.svm.ma$class)) / nrow(validate_features)
+
 
 #Load Models (time saver) ----------------------------
 load("features_ma.RData")
