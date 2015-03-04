@@ -3,6 +3,9 @@
 #make sure to run validation first
 #depends on: preprocessing_validation.R
 
+train %>% 
+  select(-label)
+
 library(kernlab)
 kpc <- kpca(~ .,
             data = train %>% select(-label),

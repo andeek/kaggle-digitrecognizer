@@ -81,10 +81,10 @@ boosted_ma.pred <- predict(boosted_ma,
 ## PPtree -------------------------------------------
 library(PPtree)
 #must remove variables with no variation
-pptree <- LDA.Tree(train_features$label,  
-                   train_features %>% 
+pptree <- LDA.Tree(train_features_ma$label,  
+                   train_features_ma %>% 
                      ungroup() %>% 
-                     select(-id, -label, -col_1, -row_1, -row_2, -col_2, -col_27, -col_28))
+                     select(-id, -label) %>% data.matrix())
 
 pptree.predict <- PP.classify(validate_features %>% 
                               ungroup() %>% 
