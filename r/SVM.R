@@ -20,3 +20,8 @@ svm3 <- svmlight(as.factor(label)~., data = train_features[,-1], type='C', paths
 pred.svm3 <- predict(svm3,newdata= validate_features[,-c(1,2)])
 table(validate_features$label, pred.svm3$class)
 1 - length(which(validate_features$label == pred.svm3$class)) / nrow(validate_features)
+
+svm4 <- svmlight(as.factor(label)~., data = train_features[,-1], type='C', pathsvm = "~/svm_light/", svm.options = "-t 2 -g .001")
+pred.svm4 <- predict(svm4,newdata= validate_features[,-c(1,2)])
+table(validate_features$label, pred.svm4$class)
+1 - length(which(validate_features$label == pred.svm4$class)) / nrow(validate_features)
