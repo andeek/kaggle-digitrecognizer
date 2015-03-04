@@ -6,7 +6,7 @@
 
 # R data files from past sessions
 .Rdata
-*.RData
+boosted.RData
 
 # RStudio files
 .Rproj.user/
@@ -14,5 +14,6 @@
 *.Rproj
 *.pdf
 
+docs/hw3-kaplan-tyner_cache/
 
 .Rproj.user
