@@ -14,7 +14,7 @@ rf_ma <- randomForest(factor(label) ~ .,
                    data = train_features_ma %>% select(-id),
                    ntree = 1000)
 
-rf$importance %>% 
+rf_ma$importance %>% 
   data.frame() %>%
   mutate(variable = factor(rownames(.), levels = rownames(.)[order(MeanDecreaseGini)])) %>%
   ggplot() +

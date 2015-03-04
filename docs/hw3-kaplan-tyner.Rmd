@@ -1,26 +1,29 @@
 ---
-title: "Kaggle Digit Recognizing"
+title: 'STAT 503 - Homework 3: Kaggle Digit Recognition'
 author: "Andee Kaplan and Samantha Tyner"
 date: "March 4, 2015"
-output: 
+output:
   pdf_document:
-    fig_width: 4
+    fig_caption: yes
     fig_height: 3
+    fig_width: 4
+    number_sections: yes
 ---
 
-Data Pre-Processing and Description
-----
-The data we are using was heavily pre-processed by MNIST.  Each image was originally in black and white, and was first normalized to fit in a $20 \times 20$ pixel box.  The normalization process, however, created a gray scale.  Subsequently, each image was centered in $28 \times 28$ pixel field around each individual image's center pixel mass. Then, the value of each of the $28 \times 28 = 784$ pixels was recorded.  These values range from 0 to 255, with 0 being the lightest possible and 255 being the darkest possible pixel value. We received the training data in a $42000 \times 785$ data frame.  The first column is the value of the digit drawn, and the remaining columns are the pixel values for each of the 784 pixels.  These columns are labeled "pixel0" through "pixel783."  "pixel0" corresponds to the top left pixel, "pixel27" corresponds to the top right pixel, "pixel756" corresponds to the bottom left pixel, and "pixel783" corresponds to the bottom right pixel in the image.  Below, we plot an example of each digit to give an idea of what the images look like.
+# Data Pre-Processing and Description
 
-```{r readingdata,echo=FALSE,cache=TRUE}
-train <- read.csv("~/Desktop/503/HW3/kaggle-digitrecognizer/data/train.csv")
+The data we are using was heavily pre-processed by MNIST.  Each image was originally in black and white, and was first normalized to fit in a $20 \times 20$ pixel box.  The normalization process, however, created a gray scale.  Subsequently, each image was centered in $28 \times 28$ pixel field around each individual image's center pixel mass. Then, the value of each of the $28 \times 28 = 784$ pixels was recorded.  These values range from 0 to 255, with 0 being the lightest possible and 255 being the darkest possible pixel value. We received the training data in a $42000 \times 785$ data frame.  The first column is the value of the digit drawn, and the remaining columns are the pixel values for each of the 784 pixels.  These columns are labeled "pixel0" through "pixel783."  "pixel0" corresponds to the top left pixel, "pixel27" corresponds to the top right pixel, "pixel756" corresponds to the bottom left pixel, and "pixel783" corresponds to the bottom right pixel in the image.  In figure \ref{fig:examp}, we plot an example of each digit to give an idea of what the images look like.
+
+```{r readingdata, echo=FALSE, cache=TRUE, message=FALSE}
+source("../r/preprocessing_validation.R")
 ```
 
-```{r exampleplots,message=FALSE,echo=FALSE}
+```{r exampleplots, message=FALSE, echo=FALSE, fig.cap="\\label{fig:examp}An example of each digit to give an idea of what the images look like."}
 library(plyr)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+
 idx <- rep(0,10)
 for (i in 0:9){
   idx[i+1] <- which(train$label == i)[1]
@@ -31,35 +34,101 @@ names(g2) <- c("digit","pixel","value")
 g3 <- g2 %>% group_by(digit) %>% arrange(digit)
 examples <- data.frame(x=rep(rep(1:28, 28),10), y=rep(rep(1:28, rep(28, 28)),10), g3)
 
-qplot(x, -y, data=examples, fill=value, geom="tile") + theme_bw() + theme(aspect.ratio=1,legend.position='none') + scale_fill_continuous(low='white',high='black') + facet_wrap(~digit,nrow=2)
+qplot(x, -y, data=examples, fill=value, geom="tile") + 
+  theme_bw() + 
+  theme(aspect.ratio=1,legend.position='none') + 
+  scale_fill_continuous(low='white',high='black') + 
+  facet_wrap(~digit,nrow=2)
 ```
 
-Pre-Processing
----
+## Pre-Processing
+
 To test our models, we separated the 42,000 row training data from Kaggle into a training and a validation set. We used tidyr to randomly sample a third of the observations, making sure to sample the digits representatively.  We use this 13,998 row sample to test all of our models, and our final model has lowest error on this set.  
 
-Feature Selection
----
-We wrestled with many different features for this classification problem. We started by deciding to limit our features to counts of non-zero entries instead of mean entry value because the fact that there is any writing in the pixel at all is more important than how dark that writing is. The following plot demonstrates this idea, as all number are still distinguishable when the writing is interpreted as 0 or 1 instead of on a scale from 0 to 255.
+## Feature Selection
 
-```{r plot2, echo = FALSE}
+We wrestled with many different features for this classification problem. We started by deciding to limit our features to counts of non-zero entries instead of mean entry value because the fact that there is any writing in the pixel at all is more important than how dark that writing is. Figure \ref{fig:zeroone} demonstrates this idea, as all numbers are still distinguishable when the writing is interpreted as 0 or 1 instead of on a scale from 0 to 255.
+
+```{r plot2, echo = FALSE, fig.cap="\\label{fig:zeroone}Imaged converted from scales to binary representations; all numbers are still distinguishable when the writing is interpreted as 0 or 1 instead of on a scale from 0 to 255."}
 examples$value2 <- as.numeric(examples$value > 0)
 qplot(x, -y, data=examples, fill=value2, geom="tile") + theme_bw() + theme(aspect.ratio=1,legend.position='none') + scale_fill_continuous(low='white',high='black') + facet_wrap(~digit,nrow=2)
 ```
 
 Our general approach to feature selection was to pick features that would capture what we as humans think are most different about the 10 digits.  For instance, there should be a lot of empty space in the middle of the $28 \times 28$ pixel image if the digit drawn in a zero, but not if the digit is an 8 or a 2. With this in mind, we created several features that capture the middle of the image: $2 \times 2$, $4 \times 4$, $8 \times 8$, and $16 \times 16$ squares right in the middle of each image.  The corresponding features are the number of non-zero entries in each of those squares. We also created features for the 4 corners of the image in $8 \times 8$ pixel squares.  Again, we counted the number of non-zero entries in each of those 4 squares to create 4 new features. We also looked at non-zero counts in each row and column of the images, creating 48 more features.  We did not include the $1^{st}$, $2^{nd}$, $27^{th}$ and $28^th$ rows or columns because these entries were all zero for all images in our training set. 
 
-After playing with several models and these features, we decided to try a different approach: maybe thinking less like a human and more like a computer would be better.  So, we computed moving averages of values in $8 \times 8$ squares across both rows and columns. To keep the number of features small, 
- we move the squares 50% of their width each time, for a total of 6 groups in each row, 6 in each columns, and 36 features total. This set of features performed slightly better than the other set, so we ended up using these features in our final model.  
- 
- *which features are most important? we should plot those here.*
+After playing with several models and these features, we decided to try a different approach: maybe thinking less like a human and more like a computer would be better.  So, we computed moving averages of values in $8 \times 8$ squares across both rows and columns. To keep the number of features small, we move the squares 50% of their width each time, for a total of 6 groups in each row, 6 in each columns, and 36 features total. This overlapping pattern is plotted in figure \ref{fig:overlap} to show the pattern described. 
+
+```{r overlapping-features, echo=FALSE, cache=TRUE, fig.cap = "\\label{fig:overlap}Squares across both rows and columns used to create overlapping features.", dependson="readingdata"}
+train %>%
+    ungroup() %>%
+    mutate(id = 1:n()) %>%
+    gather(location, value, -label, -id) %>%
+    mutate(location = as.numeric(gsub("pixel", "", location))) %>% 
+    arrange(id, location) %>%
+    cbind(matrix(1, nrow = nrow(train), ncol = 1) %x% data.matrix(expand.grid(row = 1:28, column = 1:28))) -> train.rc
+  
+  names(train.rc)[c(ncol(train.rc) - 1, ncol(train.rc))] <- c("row", "column")
+  
+  train.rc %>%
+  filter(id == 1) %>%
+  ggplot() +
+  geom_tile(aes(row, -column, fill = value)) +
+  geom_rect(aes(xmin = 1, xmax = 8, ymin = -1, ymax = -8), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 5, xmax = 12, ymin = -1, ymax = -8), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 9, xmax = 16, ymin = -1, ymax = -8), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 13, xmax = 20, ymin = -1, ymax = -8), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 17, xmax = 24, ymin = -1, ymax = -8), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 21, xmax = 28, ymin = -1, ymax = -8), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 1, xmax = 8, ymin = -5, ymax = -12), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 5, xmax = 12, ymin = -5, ymax = -12), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 9, xmax = 16, ymin = -5, ymax = -12), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 13, xmax = 20, ymin = -5, ymax = -12), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 17, xmax = 24, ymin = -5, ymax = -12), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 21, xmax = 28, ymin = -5, ymax = -12), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 1, xmax = 8, ymin = -9, ymax = -16), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 5, xmax = 12, ymin = -9, ymax = -16), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 9, xmax = 16, ymin = -9, ymax = -16), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 13, xmax = 20, ymin = -9, ymax = -16), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 17, xmax = 24, ymin = -9, ymax = -16), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 21, xmax = 28, ymin = -9, ymax = -16), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 1, xmax = 8, ymin = -13, ymax = -20), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 5, xmax = 12, ymin = -13, ymax = -20), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 9, xmax = 16, ymin = -13, ymax = -20), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 13, xmax = 20, ymin = -13, ymax = -20), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 17, xmax = 24, ymin = -13, ymax = -20), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 21, xmax = 28, ymin = -13, ymax = -20), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 1, xmax = 8, ymin = -17, ymax = -24), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 5, xmax = 12, ymin = -17, ymax = -24), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 9, xmax = 16, ymin = -17, ymax = -24), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 13, xmax = 20, ymin = -17, ymax = -24), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 17, xmax = 24, ymin = -17, ymax = -24), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 21, xmax = 28, ymin = -17, ymax = -24), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 1, xmax = 8, ymin = -21, ymax = -28), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 5, xmax = 12, ymin = -21, ymax = -28), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 9, xmax = 16, ymin = -21, ymax = -28), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 13, xmax = 20, ymin = -21, ymax = -28), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 17, xmax = 24, ymin = -21, ymax = -28), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 21, xmax = 28, ymin = -21, ymax = -28), colour = "red", alpha = 0) +
+  theme_bw() + 
+  theme(aspect.ratio = 1, legend.position = 'none') + 
+  scale_fill_continuous(low = 'white',high = 'black')
+  
+```
+
+This set of features performed slightly better than the other set, so we ended up using these features in our final model. In figure \ref{fig:pairs}, we have paired scatterplots of 3 of our moving average features colored by label. It appears that 7 (yellow) becomes distinguishable from the group using these features. Additionally, 3 (red) appears to separate using these features as well.
+
+```{r important-features, fig.height=7, fig.width=7, fig.cap="\\label{fig:pairs}Paired scatterplots of 3 of our moving average features colored by label. It appears that 7 (yellow) becomes distinguishable from the group using these features.", cache=TRUE}
+load("../written_results/features_ma.RData")
+train_features_ma %>%
+  ungroup() %>%
+  select(mean_5_9, mean_9_13, mean_5_13) %>%
+  pairs(col = train_features_ma$label)
+
+```
 
 
-Notes:
-talk about the ones we went with and why + plots of them
+# Model Selection 
 
-Model Selection 
----
 
 - KNN
 - Neural Nets
@@ -72,18 +141,18 @@ List of all the models we tried
 why we tried and picked each 
 error % for all
 
-Results
----
+# Results
+
 
 Notes:
 results from top 2 (confusion matrices)
 
 
-Final Model
----
+# Final Model
+
 
 Notes:
-Kaggle submission name: Chebychev's gender inequality. (Did I spell Chebychev right?)
+Kaggle submission name: Chebyshev's Gender Inequality
 final model used
 rank in kaggle
 final percent error and confusion matrix

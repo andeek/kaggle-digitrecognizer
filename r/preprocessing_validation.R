@@ -5,8 +5,8 @@
 
 
 #data ------------------------------------------
-train <- read.csv("data/train.csv", header=TRUE)
-test <- read.csv("data/test.csv", header=TRUE)
+train <- read.csv("../data/train.csv", header=TRUE)
+test <- read.csv("../data/test.csv", header=TRUE)
 
 
 #library --------------------------------------
