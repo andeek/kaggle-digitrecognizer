@@ -93,7 +93,7 @@ train_features <- create_features(train)
 validate_features <- create_features(validation)
 test_features <- create_features(test)
 
-
+save(train_features, validate_features, test_features, file = "written_results/features.RData")
 
 
 
