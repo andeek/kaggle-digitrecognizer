@@ -36,20 +36,36 @@ qplot(x, -y, data=examples, fill=value, geom="tile") + theme_bw() + theme(aspect
 
 Pre-Processing
 ---
-
-Notes:
-creating the validation set. 
+To test our models, we separated the 42,000 row training data from Kaggle into a training and a validation set. We used tidyr to randomly sample a third of the observations, making sure to sample the digits representatively.  We use this 13,998 row sample to test all of our models, and our final model has lowest error on this set.  
 
 Feature Selection
 ---
-We wrestled with many different features for this classification problem.  We focused on
+We wrestled with many different features for this classification problem. We started by deciding to limit our features to counts of non-zero entries instead of mean entry value because the fact that there is any writing in the pixel at all is more important than how dark that writing is. The following plot demonstrates this idea, as all number are still distinguishable when the writing is interpreted as 0 or 1 instead of on a scale from 0 to 255.
+
+```{r plot2, echo = FALSE}
+examples$value2 <- as.numeric(examples$value > 0)
+qplot(x, -y, data=examples, fill=value2, geom="tile") + theme_bw() + theme(aspect.ratio=1,legend.position='none') + scale_fill_continuous(low='white',high='black') + facet_wrap(~digit,nrow=2)
+```
+
+Our general approach to feature selection was to pick features that would capture what we as humans think are most different about the 10 digits.  For instance, there should be a lot of empty space in the middle of the $28 \times 28$ pixel image if the digit drawn in a zero, but not if the digit is an 8 or a 2. With this in mind, we created several features that capture the middle of the image: $2 \times 2$, $4 \times 4$, $8 \times 8$, and $16 \times 16$ squares right in the middle of each image.  The corresponding features are the number of non-zero entries in each of those squares. We also created features for the 4 corners of the image in $8 \times 8$ pixel squares.  Again, we counted the number of non-zero entries in each of those 4 squares to create 4 new features. We also looked at non-zero counts in each row and column of the images, creating 48 more features.  We did not include the $1^{st}$, $2^{nd}$, $27^{th}$ and $28^th$ rows or columns because these entries were all zero for all images in our training set. 
+
+After playing with several models and these features, we decided to try a different approach: maybe thinking less like a human and more like a computer would be better.  So, we computed moving averages of values in $8 \times 8$ squares across both rows and columns. To keep the number of features small, 
+ we move the squares 50% of their width each time, for a total of 6 groups in each row, 6 in each columns, and 36 features total. This set of features performed slightly better than the other set, so we ended up using these features in our final model.  
+ 
+ *which features are most important? we should plot those here.*
+
 
 Notes:
-talk bout all the ones we tried
 talk about the ones we went with and why + plots of them
 
 Model Selection 
 ---
+
+- KNN
+- Neural Nets
+- SVM 
+- Random Forest
+- Boosted Trees 
 
 Notes:
 List of all the models we tried 
@@ -67,7 +83,7 @@ Final Model
 ---
 
 Notes:
-Kaggle submission name
+Kaggle submission name: Chebychev's gender inequality. (Did I spell Chebychev right?)
 final model used
 rank in kaggle
 final percent error and confusion matrix
