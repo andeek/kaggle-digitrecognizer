@@ -1,26 +1,30 @@
 ---
-title: "Kaggle Digit Recognizing"
+title: 'STAT 503 - Homework 3: Kaggle Digit Recognition'
 author: "Andee Kaplan and Samantha Tyner"
 date: "March 4, 2015"
-output: 
+output:
   pdf_document:
-    fig_width: 4
+    fig_caption: yes
     fig_height: 3
+    fig_width: 4
+    number_sections: yes
 ---
 
-Data Pre-Processing and Description
-----
-The data we are using was heavily pre-processed by MNIST.  Each image was originally in black and white, and was first normalized to fit in a $20 \times 20$ pixel box.  The normalization process, however, created a gray scale.  Subsequently, each image was centered in $28 \times 28$ pixel field around each individual image's center pixel mass. Then, the value of each of the $28 \times 28 = 784$ pixels was recorded.  These values range from 0 to 255, with 0 being the lightest possible and 255 being the darkest possible pixel value. We received the training data in a $42000 \times 785$ data frame.  The first column is the value of the digit drawn, and the remaining columns are the pixel values for each of the 784 pixels.  These columns are labeled "pixel0" through "pixel783."  "pixel0" corresponds to the top left pixel, "pixel27" corresponds to the top right pixel, "pixel756" corresponds to the bottom left pixel, and "pixel783" corresponds to the bottom right pixel in the image.  Below, we plot an example of each digit to give an idea of what the images look like.
+# Data Pre-Processing and Description
 
-```{r readingdata,echo=FALSE,cache=TRUE}
-train <- read.csv("~/Desktop/503/HW3/kaggle-digitrecognizer/data/train.csv")
+The data we are using was heavily pre-processed by MNIST.  Each image was originally in black and white, and was first normalized to fit in a $20 \times 20$ pixel box.  The normalization process, however, created a gray scale.  Subsequently, each image was centered in $28 \times 28$ pixel field around each individual image's center pixel mass. Then, the value of each of the $28 \times 28 = 784$ pixels was recorded.  These values range from 0 to 255, with 0 being the lightest possible and 255 being the darkest possible pixel value. We received the training data in a $42000 \times 785$ data frame.  The first column is the value of the digit drawn, and the remaining columns are the pixel values for each of the 784 pixels.  These columns are labeled "pixel0" through "pixel783."  "pixel0" corresponds to the top left pixel, "pixel27" corresponds to the top right pixel, "pixel756" corresponds to the bottom left pixel, and "pixel783" corresponds to the bottom right pixel in the image.  In figure \ref{fig:examp}, we plot an example of each digit to give an idea of what the images look like.
+
+```{r readingdata, echo=FALSE, cache=TRUE, message=FALSE}
+source("../r/preprocessing_validation.R")
 ```
 
-```{r exampleplots,message=FALSE,echo=FALSE}
+```{r exampleplots, message=FALSE, echo=FALSE, fig.cap="\\label{fig:examp}An example of each digit to give an idea of what the images look like."}
 library(plyr)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(knitr)
+
 idx <- rep(0,10)
 for (i in 0:9){
   idx[i+1] <- which(train$label == i)[1]
@@ -31,59 +35,283 @@ names(g2) <- c("digit","pixel","value")
 g3 <- g2 %>% group_by(digit) %>% arrange(digit)
 examples <- data.frame(x=rep(rep(1:28, 28),10), y=rep(rep(1:28, rep(28, 28)),10), g3)
 
-qplot(x, -y, data=examples, fill=value, geom="tile") + theme_bw() + theme(aspect.ratio=1,legend.position='none') + scale_fill_continuous(low='white',high='black') + facet_wrap(~digit,nrow=2)
+qplot(x, -y, data=examples, fill=value, geom="tile") + 
+  theme_bw() + 
+  theme(aspect.ratio=1,legend.position='none') + 
+  scale_fill_continuous(low='white',high='black') + 
+  facet_wrap(~digit,nrow=2)
 ```
 
-Pre-Processing
----
+## Pre-Processing
+
 To test our models, we separated the 42,000 row training data from Kaggle into a training and a validation set. We used tidyr to randomly sample a third of the observations, making sure to sample the digits representatively.  We use this 13,998 row sample to test all of our models, and our final model has lowest error on this set.  
 
-Feature Selection
----
-We wrestled with many different features for this classification problem. We started by deciding to limit our features to counts of non-zero entries instead of mean entry value because the fact that there is any writing in the pixel at all is more important than how dark that writing is. The following plot demonstrates this idea, as all number are still distinguishable when the writing is interpreted as 0 or 1 instead of on a scale from 0 to 255.
+## Feature Selection
 
-```{r plot2, echo = FALSE}
+We wrestled with many different features for this classification problem. We started by deciding to limit our features to counts of non-zero entries instead of mean entry value because the fact that there is any writing in the pixel at all is more important than how dark that writing is. Figure \ref{fig:zeroone} demonstrates this idea, as all numbers are still distinguishable when the writing is interpreted as 0 or 1 instead of on a scale from 0 to 255.
+
+```{r plot2, echo = FALSE, fig.cap="\\label{fig:zeroone}Imaged converted from scales to binary representations; all numbers are still distinguishable when the writing is interpreted as 0 or 1 instead of on a scale from 0 to 255."}
 examples$value2 <- as.numeric(examples$value > 0)
 qplot(x, -y, data=examples, fill=value2, geom="tile") + theme_bw() + theme(aspect.ratio=1,legend.position='none') + scale_fill_continuous(low='white',high='black') + facet_wrap(~digit,nrow=2)
 ```
 
 Our general approach to feature selection was to pick features that would capture what we as humans think are most different about the 10 digits.  For instance, there should be a lot of empty space in the middle of the $28 \times 28$ pixel image if the digit drawn in a zero, but not if the digit is an 8 or a 2. With this in mind, we created several features that capture the middle of the image: $2 \times 2$, $4 \times 4$, $8 \times 8$, and $16 \times 16$ squares right in the middle of each image.  The corresponding features are the number of non-zero entries in each of those squares. We also created features for the 4 corners of the image in $8 \times 8$ pixel squares.  Again, we counted the number of non-zero entries in each of those 4 squares to create 4 new features. We also looked at non-zero counts in each row and column of the images, creating 48 more features.  We did not include the $1^{st}$, $2^{nd}$, $27^{th}$ and $28^th$ rows or columns because these entries were all zero for all images in our training set. 
 
-After playing with several models and these features, we decided to try a different approach: maybe thinking less like a human and more like a computer would be better.  So, we computed moving averages of values in $8 \times 8$ squares across both rows and columns. To keep the number of features small, 
- we move the squares 50% of their width each time, for a total of 6 groups in each row, 6 in each columns, and 36 features total. This set of features performed slightly better than the other set, so we ended up using these features in our final model.  
- 
- *which features are most important? we should plot those here.*
+After playing with several models and these features, we decided to try a different approach: maybe thinking less like a human and more like a computer would be better.  So, we computed moving averages of values in $8 \times 8$ squares across both rows and columns. To keep the number of features small, we move the squares 50% of their width each time, for a total of 6 groups in each row, 6 in each columns, and 36 features total. This overlapping pattern is plotted in figure \ref{fig:overlap} to show the pattern described. 
 
+```{r overlapping-features, echo=FALSE, cache=TRUE, fig.cap = "\\label{fig:overlap}Squares across both rows and columns used to create overlapping features.", dependson="readingdata"}
+train %>%
+    ungroup() %>%
+    mutate(id = 1:n()) %>%
+    gather(location, value, -label, -id) %>%
+    mutate(location = as.numeric(gsub("pixel", "", location))) %>% 
+    arrange(id, location) %>%
+    cbind(matrix(1, nrow = nrow(train), ncol = 1) %x% data.matrix(expand.grid(row = 1:28, column = 1:28))) -> train.rc
+  
+  names(train.rc)[c(ncol(train.rc) - 1, ncol(train.rc))] <- c("row", "column")
+  
+  train.rc %>%
+  filter(id == 1) %>%
+  ggplot() +
+  geom_tile(aes(row, -column, fill = value)) +
+  geom_rect(aes(xmin = 1, xmax = 8, ymin = -1, ymax = -8), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 5, xmax = 12, ymin = -1, ymax = -8), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 9, xmax = 16, ymin = -1, ymax = -8), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 13, xmax = 20, ymin = -1, ymax = -8), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 17, xmax = 24, ymin = -1, ymax = -8), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 21, xmax = 28, ymin = -1, ymax = -8), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 1, xmax = 8, ymin = -5, ymax = -12), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 5, xmax = 12, ymin = -5, ymax = -12), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 9, xmax = 16, ymin = -5, ymax = -12), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 13, xmax = 20, ymin = -5, ymax = -12), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 17, xmax = 24, ymin = -5, ymax = -12), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 21, xmax = 28, ymin = -5, ymax = -12), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 1, xmax = 8, ymin = -9, ymax = -16), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 5, xmax = 12, ymin = -9, ymax = -16), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 9, xmax = 16, ymin = -9, ymax = -16), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 13, xmax = 20, ymin = -9, ymax = -16), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 17, xmax = 24, ymin = -9, ymax = -16), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 21, xmax = 28, ymin = -9, ymax = -16), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 1, xmax = 8, ymin = -13, ymax = -20), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 5, xmax = 12, ymin = -13, ymax = -20), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 9, xmax = 16, ymin = -13, ymax = -20), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 13, xmax = 20, ymin = -13, ymax = -20), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 17, xmax = 24, ymin = -13, ymax = -20), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 21, xmax = 28, ymin = -13, ymax = -20), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 1, xmax = 8, ymin = -17, ymax = -24), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 5, xmax = 12, ymin = -17, ymax = -24), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 9, xmax = 16, ymin = -17, ymax = -24), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 13, xmax = 20, ymin = -17, ymax = -24), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 17, xmax = 24, ymin = -17, ymax = -24), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 21, xmax = 28, ymin = -17, ymax = -24), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 1, xmax = 8, ymin = -21, ymax = -28), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 5, xmax = 12, ymin = -21, ymax = -28), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 9, xmax = 16, ymin = -21, ymax = -28), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 13, xmax = 20, ymin = -21, ymax = -28), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 17, xmax = 24, ymin = -21, ymax = -28), colour = "red", alpha = 0) +
+  geom_rect(aes(xmin = 21, xmax = 28, ymin = -21, ymax = -28), colour = "red", alpha = 0) +
+  theme_bw() + 
+  theme(aspect.ratio = 1, legend.position = 'none') + 
+  scale_fill_continuous(low = 'white',high = 'black')
+  
+```
 
-Notes:
-talk about the ones we went with and why + plots of them
+This set of features performed slightly better than the other set, so we ended up using these features in our final model. In figure \ref{fig:pairs}, we have paired scatterplots of 3 of our moving average features colored by label. It appears that 7 (yellow) becomes distinguishable from the group using these features. Additionally, 3 (red) appears to separate using these features as well.
 
-Model Selection 
----
+```{r important-features, fig.height=7, fig.width=7, fig.cap="\\label{fig:pairs}Paired scatterplots of 3 of our moving average features colored by label. It appears that 7 (yellow) becomes distinguishable from the group using these features.", cache=TRUE, echo=FALSE}
+load("../written_results/features_ma.RData")
+train_features_ma %>%
+  ungroup() %>%
+  select(mean_5_9, mean_9_13, mean_5_13) %>%
+  pairs(col = train_features_ma$label)
+
+```
+
+# Model Selection 
+
+Our approach to model selection was to fit as many models as was humanly possible, evaluate them on our validation set, and select the model with the lowest validation error. We ended up fitting four types of models on our two sets of features. These model types include 
 
 - KNN
 - Neural Nets
 - SVM 
-- Random Forest
-- Boosted Trees 
+- Trees.
 
-Notes:
-List of all the models we tried 
-why we tried and picked each 
-error % for all
+Tree models include random forests and boosted trees. In all of our models the second set of features (moving average) performed better, so we will focus on these models only. The best model from each type and its error rate are displayed in table \ref{tab:errors}.
 
-Results
----
+```{r errors, echo=FALSE}
+load("../written_results/predict.RData")
 
-Notes:
-results from top 2 (confusion matrices)
+data.frame(Model = c("KNN", "Neural Net", "SVM", "Random Forest", "Boosted Tree"),
+           Parameters = c("",
+                          "",
+                          "", 
+                          "n.tree = 1000", 
+                          "shrinkage = .1, depth = 16, n.trees = 500"),
+           error = c(NA, 
+                     NA, 
+                     NA, 
+                     mean(as.numeric(as.character(rf.predict_ma)) != validate_features_ma$label),
+                     mean(apply(boosted_ma.pred[,,1], 1, which.max) - 1 != validate_features_ma$label))) %>%
+  kable(digits = 4, col.names = c("Model", "Parameters", "Validation Error"), caption = "\\label{tab:errors}Best models from each group of models displayed with parameters and validation error rates. The boosted tree model worked best on our validation set.")
+```
+
+# Results
+
+From table \ref{tab:errors}, the boosted tree with tree depth of $16$ and learning rate of $0.1$ performed the best for our validation set. As such, we can look at the confusion matrix in table \ref{tab:conf} to get a better feel for where our model is having trouble.
+
+```{r confusion, echo=FALSE}
+conf <- table(apply(boosted_ma.pred[,,1], 1, which.max) - 1, validate_features_ma$label)
+conf <- rbind(conf, sapply(1:ncol(conf), function(i) conf[i, i]/sum(conf[,i])))
+rownames(conf)[nrow(conf)] <- "% Correct"
+
+conf %>%
+  kable(digits = 2, caption = "\\label{tab:conf}Confusion matrix for the boosted tree model with depth of 16 and learning rate 0.1. The % correctly specified is added to each column as an indicator of where our model struggled.")
+  
+```
+
+It appears that our model has the most trouble predicting fives, with 92% validation accuracy, it is the lowest. Fives are most commonly confused with threes in the model, and second most confused with eights. Another potential issue comes with distinguishing fours and nines. At this point it might be useful to construct a feature that can more easily distinguish between fives, eights, and threes to add to our model. Unfortunately this assignment comes with a finite amount of time, and so we will move forward with the current model. 
+
+# Final Model
+
+Finally, we transformed our test data to contain the same moving average features and predicted the labels for the test data using our boosted tree model as detailed in the previous sections. The final results for the competition are below.
+
+- *Kaggle team name:* Chebyshev's Gender Inequality
+- *Final model used:* Boosted tree model with depth 16 and learning rate 0.1
+- *Rank in Kaggle (at time of submission):* 
+- *Final percent error:* 
+
+As a note, all of our code as well as this report are available at https://github.com/andeek/kaggle-digitrecognizer if further details are desired.
+
+# Code Appendix
+
+```{r code, eval = FALSE}
+#Validation set creation -----------------------------
+#data 
+train <- read.csv("train.csv", header=TRUE)
+test <- read.csv("test.csv", header=TRUE)
 
 
-Final Model
----
+#library
+library(dplyr)
+library(tidyr)
+library(ggplot2)
 
-Notes:
-Kaggle submission name: Chebychev's gender inequality. (Did I spell Chebychev right?)
-final model used
-rank in kaggle
-final percent error and confusion matrix
+#split into train/validate 
+set.seed(503503) #reproduce
+
+train %>%
+  group_by(label) %>%
+  sample_frac(1/3) -> validation
+
+train %>%
+  anti_join(validation) -> train
+
+train %>% 
+  mutate_each(funs(as.numeric), starts_with("pixel")) -> train
+
+test %>%
+  mutate(label = paste0("fake", 1:n())) -> test #fake label for grouping
+
+#Moving Average features (Don't run) ----------------------------------------
+create_features_ma <- function(data) {
+  data %>%
+    ungroup() %>%
+    mutate(id = 1:n()) %>%
+    gather(location, value, -label, -id) %>%
+    mutate(location = as.numeric(gsub("pixel", "", location))) %>% 
+    arrange(id, location) %>%
+    cbind(matrix(1, nrow = nrow(data), ncol = 1) %x% 
+            data.matrix(expand.grid(row = 1:28, column = 1:28))) -> data.rc
+  
+  names(data.rc)[c(ncol(data.rc) - 1, ncol(data.rc))] <- c("row", "column")
+  
+  step <- 8
+  start_r <- 1
+  finish_r <- start_r + step - 1
+  start_c <- 1
+  finish_c <- start_c + step - 1
+  features <- data.rc %>% select(id, label) %>% unique()
+  
+  while(finish_c <= 28) {
+    while(finish_r <= 28) {
+      data.rc %>%
+        filter(row %in% start_r:finish_r, column %in% start_c:finish_c) %>%
+        group_by(label, id) %>%
+        summarise(mean(value)) -> means
+      
+      names(means)[ncol(means)] <- paste("mean", start_r, start_c, sep = "_")
+      
+      means %>%
+        right_join(features, by = c("id", "label")) -> features
+      
+      start_r <- start_r + 4
+      finish_r <- start_r + step - 1
+    }
+    
+    start_r <- 1
+    finish_r <- start_r + step - 1
+    
+    start_c <- start_c + 4
+    finish_c <- start_c + step - 1
+  }
+  
+  return(features)
+}
+
+#create features for 3 datasets
+train_features_ma <- create_features_ma(train)
+validate_features_ma <- create_features_ma(validation)
+test_features_ma <- create_features_ma(test)
+
+#Tree Models (Don't run) ----------------------------------------------------
+#random forest 
+library(randomForest)
+
+rf_ma <- randomForest(factor(label) ~ ., 
+                   data = train_features_ma %>% select(-id),
+                   ntree = 1000)
+
+rf_ma$importance %>% 
+  data.frame() %>%
+  mutate(variable = factor(rownames(.), levels = rownames(.)[order(MeanDecreaseGini)])) %>%
+  ggplot() +
+  geom_point(aes(MeanDecreaseGini, variable))
+
+rf.predict_ma <- predict(rf_ma, validate_features_ma, type = "class")
+
+#validation error 
+#mean(as.numeric(as.character(rf.predict_ma)) != validate_features_ma$label)
+
+#boosted trees
+library(gbm)
+
+boosted_ma <- gbm(formula = factor(label) ~ .,
+                  data = train_features_ma %>% select(-id),
+                  distribution = "multinomial",
+                  shrinkage = .1,
+                  interaction.depth = 16,
+                  n.trees = 500)
+
+boosted_ma.pred <- predict(boosted_ma, 
+                          validate_features_ma %>% select(-id, -label), 
+                          n.trees = boosted_ma$n.trees, type = "response")
+
+
+#validation_error
+#mean(apply(boosted_ma.pred[,,1], 1, which.max) - 1 != validate_features_ma$label)
+
+#Load Models (time saver) ----------------------------
+load("features_ma.RData")
+load("models.RData")
+load("predict.RData")
+
+#Predict Test data -----------------------------------
+boosted_ma.test <- predict(boosted_ma, 
+                          test_features_ma %>% select(-id, -label), 
+                          n.trees = boosted_ma$n.trees, type = "response")
+
+#prediction returns probability of each class
+boosted_ma.test <- apply(boosted_ma.test[,,1], 1, which.max) - 1
+write.table(boosted_ma.test, "final_prediction.csv", row.names = FALSE, col.names = FALSE)
+```
+
