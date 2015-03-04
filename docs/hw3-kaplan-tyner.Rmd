@@ -34,5 +34,40 @@ examples <- data.frame(x=rep(rep(1:28, 28),10), y=rep(rep(1:28, rep(28, 28)),10)
 qplot(x, -y, data=examples, fill=value, geom="tile") + theme_bw() + theme(aspect.ratio=1,legend.position='none') + scale_fill_continuous(low='white',high='black') + facet_wrap(~digit,nrow=2)
 ```
 
+Pre-Processing
+---
+
+Notes:
+creating the validation set. 
+
 Feature Selection
 ---
+We wrestled with many different features for this classification problem.  We focused on
+
+Notes:
+talk bout all the ones we tried
+talk about the ones we went with and why + plots of them
+
+Model Selection 
+---
+
+Notes:
+List of all the models we tried 
+why we tried and picked each 
+error % for all
+
+Results
+---
+
+Notes:
+results from top 2 (confusion matrices)
+
+
+Final Model
+---
+
+Notes:
+Kaggle submission name
+final model used
+rank in kaggle
+final percent error and confusion matrix
