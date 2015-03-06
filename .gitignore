@@ -17,3 +17,6 @@ boosted.RData
 docs/hw3-kaplan-tyner_cache/
 
 .Rproj.user
+
+#mac
+.DS_store
